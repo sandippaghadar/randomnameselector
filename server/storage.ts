@@ -24,6 +24,9 @@ export class MemStorage implements IStorage {
   private names: Map<number, Name>;
   currentId: number;
   private nameId: number;
+  // Keep track of recently selected names to avoid repeats
+  private recentlySelected: Set<string>[] = [];
+  private MAX_HISTORY = 6; // Don't repeat names in last 6 generations
 
   constructor() {
     this.users = new Map();
@@ -90,17 +93,40 @@ export class MemStorage implements IStorage {
       return allNames.map(name => name.fullName);
     }
     
-    // Randomly select 'count' names from our list without duplicates
+    // Create a set of all recently used names (from past 6 generations)
+    const recentlyUsedNames = new Set<string>();
+    this.recentlySelected.forEach(set => {
+      set.forEach(name => recentlyUsedNames.add(name));
+    });
+    
+    // Filter out names that have been used recently (if possible)
+    let eligibleNames = allNames.filter(name => !recentlyUsedNames.has(name.fullName));
+    
+    // If we don't have enough eligible names after filtering, use all names
+    if (eligibleNames.length < count) {
+      eligibleNames = allNames;
+    }
+    
+    // Randomly select 'count' names from our eligible list without duplicates
     const result: string[] = [];
-    const namesCopy = [...allNames]; // Create a copy to avoid modifying the original
+    const namesCopy = [...eligibleNames]; // Create a copy to avoid modifying the original
     
     for (let i = 0; i < count && namesCopy.length > 0; i++) {
       // Pick a random index
       const randomIndex = Math.floor(Math.random() * namesCopy.length);
       // Add the name at that index to results
       result.push(namesCopy[randomIndex].fullName);
-      // Remove that name from the copy to avoid duplicates
+      // Remove that name from the copy to avoid duplicates in this selection
       namesCopy.splice(randomIndex, 1);
+    }
+    
+    // Add this selection to our history of recently selected names
+    const currentSelection = new Set(result);
+    this.recentlySelected.unshift(currentSelection);
+    
+    // Keep only the last MAX_HISTORY selections
+    if (this.recentlySelected.length > this.MAX_HISTORY) {
+      this.recentlySelected.pop();
     }
     
     return result;

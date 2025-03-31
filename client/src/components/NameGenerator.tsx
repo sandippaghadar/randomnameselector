@@ -8,11 +8,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { List, Loader2, Copy, RefreshCw } from "lucide-react";
 import ResultsList from "@/components/ResultsList";
 import GenerationHistory from "@/components/GenerationHistory";
 
+// Form schema for count
+const formSchema = z.object({
+  count: z.coerce.number().min(1).max(100).default(5),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 
 const NameGenerator = () => {
@@ -23,6 +29,14 @@ const NameGenerator = () => {
     return savedHistory ? JSON.parse(savedHistory) : [];
   });
   const { toast } = useToast();
+  
+  // Initialize form with default values
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      count: 5
+    }
+  });
 
   // Generate names mutation
   const generateMutation = useMutation({
@@ -55,9 +69,9 @@ const NameGenerator = () => {
     },
   });
 
-  const handleGenerate = () => {
-    // Always generate 5 names
-    generateMutation.mutate(5);
+  const handleFormSubmit = (values: FormValues) => {
+    // Generate the number of names specified in the form
+    generateMutation.mutate(values.count);
   };
 
   const handleReset = () => {
@@ -99,38 +113,66 @@ const NameGenerator = () => {
     <div className="space-y-6">
       <Card className="bg-white rounded-lg shadow-md">
         <CardHeader>
-          <CardTitle className="text-xl font-medium text-gray-800">Select 5 Random Names from Your List</CardTitle>
+          <CardTitle className="text-xl font-medium text-gray-800">Select Random Names from Your List</CardTitle>
+          <CardDescription>Specify how many random names you want to select</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex space-x-2">
-            <Button
-              onClick={handleGenerate}
-              disabled={generateMutation.isPending}
-              className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-md font-medium flex items-center transition-colors duration-200"
-            >
-              {generateMutation.isPending ? (
-                <>
-                  <span>Selecting...</span>
-                  <Loader2 className="ml-2 h-5 w-5 animate-spin" />
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-5 w-5" />
-                  Select 5 Random Names
-                </>
-              )}
-            </Button>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
+              <div className="grid grid-cols-5 gap-4">
+                <div className="col-span-2">
+                  <FormField
+                    control={form.control}
+                    name="count"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Number of names to select</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="5" 
+                            min={1} 
+                            max={100} 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="col-span-3 flex items-end space-x-2">
+                  <Button
+                    type="submit"
+                    disabled={generateMutation.isPending}
+                    className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-md font-medium flex items-center transition-colors duration-200"
+                  >
+                    {generateMutation.isPending ? (
+                      <>
+                        <span>Selecting...</span>
+                        <Loader2 className="ml-2 h-5 w-5 animate-spin" />
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="mr-2 h-5 w-5" />
+                        Select Random Names
+                      </>
+                    )}
+                  </Button>
 
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleReset}
-              disabled={generateMutation.isPending}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium flex items-center transition-colors duration-200"
-            >
-              Reset
-            </Button>
-          </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleReset}
+                    disabled={generateMutation.isPending}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium flex items-center transition-colors duration-200"
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </Form>
         </CardContent>
       </Card>
 
