@@ -1,24 +1,122 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import GeneratorForm from "./GeneratorForm";
-import ResultsList from "./ResultsList";
 import { useToast } from "@/hooks/use-toast";
-import { type GenerateNamesResponse } from "@shared/schema";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { List, Loader2, Copy, RefreshCw } from "lucide-react";
+import ResultsList from "@/components/ResultsList";
+
+// Form schema with validation
+const formSchema = z.object({
+  count: z.coerce
+    .number()
+    .min(1, { message: "Count must be at least 1" })
+    .max(100, { message: "Count cannot exceed 100" }),
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
+const GeneratorForm = ({ onGenerate, onReset, isLoading }: {
+  onGenerate: (count: number) => void;
+  onReset: () => void;
+  isLoading: boolean;
+}) => {
+  // Initialize form with default values
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      count: 5,
+    },
+  });
+
+  const handleSubmit = (values: FormValues) => {
+    onGenerate(values.count);
+  };
+
+  return (
+    <Card className="bg-white rounded-lg shadow-md">
+      <CardHeader>
+        <CardTitle className="text-xl font-medium text-gray-800">Generate Random Names</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="count"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700">
+                    Number of Names
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="Enter count (1-100)"
+                      {...field}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                    />
+                  </FormControl>
+                  <FormMessage className="text-error text-sm" />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex space-x-2">
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-md font-medium flex items-center transition-colors duration-200"
+              >
+                {isLoading ? (
+                  <>
+                    <span>Generating...</span>
+                    <Loader2 className="ml-2 h-5 w-5 animate-spin" />
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-5 w-5" />
+                    Generate
+                  </>
+                )}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onReset}
+                disabled={isLoading}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium flex items-center transition-colors duration-200"
+              >
+                Reset
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+};
 
 const NameGenerator = () => {
-  const [names, setNames] = useState<string[]>([]);
+  const [generatedNames, setGeneratedNames] = useState<string[]>([]);
   const { toast } = useToast();
-  
-  // Mutation for generating names
-  const namesMutation = useMutation({
+
+  // Generate names mutation
+  const generateMutation = useMutation({
     mutationFn: async (count: number) => {
       const response = await apiRequest("POST", "/api/names/generate", { count });
-      const data = await response.json() as GenerateNamesResponse;
-      return data.names;
+      const data = await response.json();
+      return data.names as string[];
     },
-    onSuccess: (data) => {
-      setNames(data);
+    onSuccess: (names) => {
+      setGeneratedNames(names);
     },
     onError: (error) => {
       toast({
@@ -30,52 +128,46 @@ const NameGenerator = () => {
   });
 
   const handleGenerate = (count: number) => {
-    namesMutation.mutate(count);
+    generateMutation.mutate(count);
   };
 
   const handleReset = () => {
-    setNames([]);
+    setGeneratedNames([]);
   };
 
   const handleCopy = () => {
-    if (names.length === 0) return;
-    
-    const nameText = names.join('\n');
-    navigator.clipboard.writeText(nameText).then(
-      () => {
-        toast({
-          title: "Success",
-          description: "Names copied to clipboard!",
-          variant: "default",
-          className: "bg-success text-white",
+    if (generatedNames.length > 0) {
+      navigator.clipboard.writeText(generatedNames.join('\n'))
+        .then(() => {
+          toast({
+            title: "Copied!",
+            description: "Names copied to clipboard",
+            variant: "default",
+            className: "bg-success text-white",
+          });
+        })
+        .catch((error) => {
+          toast({
+            title: "Error",
+            description: "Failed to copy to clipboard",
+            variant: "destructive",
+          });
         });
-      },
-      (err) => {
-        toast({
-          title: "Error",
-          description: "Failed to copy names to clipboard",
-          variant: "destructive",
-        });
-        console.error('Could not copy text: ', err);
-      }
-    );
+    }
   };
 
   return (
-    <>
-      <GeneratorForm 
-        onGenerate={handleGenerate} 
-        onReset={handleReset} 
-        isLoading={namesMutation.isPending} 
+    <div className="space-y-6">
+      <GeneratorForm
+        onGenerate={handleGenerate}
+        onReset={handleReset}
+        isLoading={generateMutation.isPending}
       />
-      
-      {names.length > 0 && (
-        <ResultsList 
-          names={names} 
-          onCopy={handleCopy} 
-        />
+
+      {generatedNames.length > 0 && (
+        <ResultsList names={generatedNames} onCopy={handleCopy} />
       )}
-    </>
+    </div>
   );
 };
 

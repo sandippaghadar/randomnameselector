@@ -1,4 +1,4 @@
-import { users, type User, type InsertUser } from "@shared/schema";
+import { users, type User, type InsertUser, type Name, type AddNameRequest } from "@shared/schema";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -10,17 +10,26 @@ export interface IStorage {
   getFirstNames(): string[];
   getLastNames(): string[];
   generateRandomNames(count: number): string[];
+  
+  // Name management methods
+  getAllNames(): Name[];
+  addName(name: AddNameRequest): Name;
+  removeName(id: number): boolean;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private firstNames: string[];
   private lastNames: string[];
+  private names: Map<number, Name>;
   currentId: number;
+  private nameId: number;
 
   constructor() {
     this.users = new Map();
+    this.names = new Map();
     this.currentId = 1;
+    this.nameId = 1;
     
     // List of common first names
     this.firstNames = [
@@ -82,6 +91,26 @@ export class MemStorage implements IStorage {
     }
     
     return names;
+  }
+  
+  // Name management methods implementation
+  getAllNames(): Name[] {
+    return Array.from(this.names.values());
+  }
+  
+  addName(nameRequest: AddNameRequest): Name {
+    const id = this.nameId++;
+    const newName: Name = {
+      id,
+      fullName: nameRequest.fullName
+    };
+    
+    this.names.set(id, newName);
+    return newName;
+  }
+  
+  removeName(id: number): boolean {
+    return this.names.delete(id);
   }
 }
 

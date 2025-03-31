@@ -17,6 +17,35 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
+// Schema for name management
+export const nameSchema = z.object({
+  id: z.number(),
+  fullName: z.string().min(1, "Name is required"),
+});
+
+export type Name = z.infer<typeof nameSchema>;
+
+// Schema for adding a new name
+export const addNameSchema = z.object({
+  fullName: z.string().min(1, "Name is required"),
+});
+
+export type AddNameRequest = z.infer<typeof addNameSchema>;
+
+// Schema for removing a name
+export const removeNameSchema = z.object({
+  id: z.number(),
+});
+
+export type RemoveNameRequest = z.infer<typeof removeNameSchema>;
+
+// Schema for getting all names response
+export const getAllNamesResponseSchema = z.object({
+  names: z.array(nameSchema),
+});
+
+export type GetAllNamesResponse = z.infer<typeof getAllNamesResponseSchema>;
+
 // Schema for name generation request
 export const generateNamesRequestSchema = z.object({
   count: z.number().min(1).max(100),
