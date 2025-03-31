@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -20,13 +20,19 @@ const NameManager = () => {
     }
   });
   
+  // Extract just the name strings for duplicate checking
+  const existingNameStrings = useMemo(() => {
+    if (!namesQuery.data) return [];
+    return namesQuery.data.map(name => name.fullName);
+  }, [namesQuery.data]);
+  
   // Add name mutation
   const addNameMutation = useMutation({
     mutationFn: async (name: AddNameRequest) => {
       const response = await apiRequest("POST", "/api/names", name);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Success",
         description: "Name added successfully!",
@@ -81,7 +87,8 @@ const NameManager = () => {
     <div className="space-y-6">
       <NameForm 
         onAddName={handleAddName} 
-        isLoading={addNameMutation.isPending} 
+        isLoading={addNameMutation.isPending}
+        existingNames={existingNameStrings}
       />
       
       <NamesTable 
