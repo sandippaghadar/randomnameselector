@@ -11,7 +11,7 @@ const ResultsList = ({ names, onCopy }: ResultsListProps) => {
   return (
     <Card className="bg-white rounded-lg shadow-md">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-xl font-medium text-gray-800">Generated Names</CardTitle>
+        <CardTitle className="text-xl font-medium text-gray-800">Selected Names</CardTitle>
         <Button 
           variant="ghost" 
           onClick={onCopy}
@@ -27,9 +27,10 @@ const ResultsList = ({ names, onCopy }: ResultsListProps) => {
             {names.map((name, index) => (
               <li 
                 key={index} 
-                className="px-4 py-3 hover:bg-gray-50 transition-colors duration-150"
+                className="px-4 py-3 hover:bg-gray-50 transition-colors duration-150 flex"
               >
-                {name}
+                <span className="mr-3 font-medium text-primary">{index + 1}.</span>
+                <span>{name}</span>
               </li>
             ))}
           </ul>

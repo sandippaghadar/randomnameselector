@@ -82,15 +82,28 @@ export class MemStorage implements IStorage {
   }
   
   generateRandomNames(count: number): string[] {
-    const names: string[] = [];
+    // Get all names from our list
+    const allNames = this.getAllNames();
     
-    for (let i = 0; i < count; i++) {
-      const firstName = this.firstNames[Math.floor(Math.random() * this.firstNames.length)];
-      const lastName = this.lastNames[Math.floor(Math.random() * this.lastNames.length)];
-      names.push(`${firstName} ${lastName}`);
+    // If we don't have enough names, return what we have
+    if (allNames.length <= count) {
+      return allNames.map(name => name.fullName);
     }
     
-    return names;
+    // Randomly select 'count' names from our list without duplicates
+    const result: string[] = [];
+    const namesCopy = [...allNames]; // Create a copy to avoid modifying the original
+    
+    for (let i = 0; i < count && namesCopy.length > 0; i++) {
+      // Pick a random index
+      const randomIndex = Math.floor(Math.random() * namesCopy.length);
+      // Add the name at that index to results
+      result.push(namesCopy[randomIndex].fullName);
+      // Remove that name from the copy to avoid duplicates
+      namesCopy.splice(randomIndex, 1);
+    }
+    
+    return result;
   }
   
   // Name management methods implementation

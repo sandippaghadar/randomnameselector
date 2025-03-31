@@ -99,7 +99,7 @@ const NameGenerator = () => {
     <div className="space-y-6">
       <Card className="bg-white rounded-lg shadow-md">
         <CardHeader>
-          <CardTitle className="text-xl font-medium text-gray-800">Generate 5 Random Names</CardTitle>
+          <CardTitle className="text-xl font-medium text-gray-800">Select 5 Random Names from Your List</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex space-x-2">
@@ -110,13 +110,13 @@ const NameGenerator = () => {
             >
               {generateMutation.isPending ? (
                 <>
-                  <span>Generating...</span>
+                  <span>Selecting...</span>
                   <Loader2 className="ml-2 h-5 w-5 animate-spin" />
                 </>
               ) : (
                 <>
                   <RefreshCw className="mr-2 h-5 w-5" />
-                  Generate 5 Names
+                  Select 5 Random Names
                 </>
               )}
             </Button>
