@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { List, Loader2, Copy, RefreshCw } from "lucide-react";
 import ResultsList from "@/components/ResultsList";
+import GenerationHistory from "@/components/GenerationHistory";
 
 // Form schema with validation
 const formSchema = z.object({
@@ -106,6 +107,11 @@ const GeneratorForm = ({ onGenerate, onReset, isLoading }: {
 
 const NameGenerator = () => {
   const [generatedNames, setGeneratedNames] = useState<string[]>([]);
+  const [generationHistory, setGenerationHistory] = useState<{date: string, names: string[]}[]>(() => {
+    // Load history from localStorage on initial render
+    const savedHistory = localStorage.getItem('nameGenerationHistory');
+    return savedHistory ? JSON.parse(savedHistory) : [];
+  });
   const { toast } = useToast();
 
   // Generate names mutation
@@ -117,6 +123,18 @@ const NameGenerator = () => {
     },
     onSuccess: (names) => {
       setGeneratedNames(names);
+      
+      // Add to history with timestamp
+      const newEntry = {
+        date: new Date().toLocaleString(),
+        names: names
+      };
+      
+      const updatedHistory = [newEntry, ...generationHistory.slice(0, 9)]; // Keep last 10 entries
+      setGenerationHistory(updatedHistory);
+      
+      // Save to localStorage
+      localStorage.setItem('nameGenerationHistory', JSON.stringify(updatedHistory));
     },
     onError: (error) => {
       toast({
@@ -133,6 +151,16 @@ const NameGenerator = () => {
 
   const handleReset = () => {
     setGeneratedNames([]);
+  };
+
+  const handleClearHistory = () => {
+    setGenerationHistory([]);
+    localStorage.removeItem('nameGenerationHistory');
+    toast({
+      title: "History Cleared",
+      description: "Generation history has been cleared",
+      variant: "default",
+    });
   };
 
   const handleCopy = () => {
@@ -166,6 +194,14 @@ const NameGenerator = () => {
 
       {generatedNames.length > 0 && (
         <ResultsList names={generatedNames} onCopy={handleCopy} />
+      )}
+      
+      {/* Show generation history if available */}
+      {generationHistory.length > 0 && (
+        <GenerationHistory 
+          history={generationHistory} 
+          onClearHistory={handleClearHistory} 
+        />
       )}
     </div>
   );

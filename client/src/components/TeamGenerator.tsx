@@ -1,16 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { Name } from "@shared/schema";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
-import { Users, Loader2, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Loader2, RefreshCw, UsersRound } from "lucide-react";
+import { Name } from "@shared/schema";
 
 // Form schema with validation
 const formSchema = z.object({
@@ -29,17 +29,15 @@ type Team = {
 
 const TeamGenerator = () => {
   const [teams, setTeams] = useState<Team[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const { toast } = useToast();
 
   // Fetch all names
-  const namesQuery = useQuery({
+  const { data: namesData, isLoading: isLoadingNames } = useQuery({
     queryKey: ['/api/names'],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/names");
-      const data = await response.json();
-      return data.names as Name[];
-    }
+    refetchOnWindowFocus: false,
   });
+  
+  const names = namesData?.names || [];
 
   // Initialize form with default values
   const form = useForm<FormValues>({
@@ -49,45 +47,63 @@ const TeamGenerator = () => {
     },
   });
 
-  const generateTeams = (names: Name[], teamCount: number) => {
-    // Make a copy of the names array to avoid modifying the original
-    const namesCopy = [...names];
-    // Shuffle the array using Fisher-Yates algorithm
-    for (let i = namesCopy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [namesCopy[i], namesCopy[j]] = [namesCopy[j], namesCopy[i]];
-    }
-
-    // Create teams
-    const teams: Team[] = Array.from({ length: teamCount }, (_, i) => ({
-      name: `Team ${i + 1}`,
-      members: [],
-    }));
-
-    // Distribute names evenly among teams
-    namesCopy.forEach((name, index) => {
-      const teamIndex = index % teamCount;
-      teams[teamIndex].members.push(name);
-    });
-
-    return teams;
-  };
-
   const handleSubmit = (values: FormValues) => {
-    if (!namesQuery.data || namesQuery.data.length < values.teamCount) {
-      form.setError("teamCount", { 
-        type: "manual", 
-        message: "Not enough names to create that many teams" 
+    if (names.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please add some names before generating teams",
+        variant: "destructive",
       });
       return;
     }
 
-    setIsGenerating(true);
-    setTimeout(() => {
-      const generatedTeams = generateTeams(namesQuery.data, values.teamCount);
-      setTeams(generatedTeams);
-      setIsGenerating(false);
-    }, 500); // Small delay for visual feedback
+    if (names.length < values.teamCount) {
+      toast({
+        title: "Error",
+        description: `Need at least ${values.teamCount} names to create ${values.teamCount} teams`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Shuffle names
+    generateTeams(values.teamCount);
+  };
+
+  // Function to shuffle array
+  const shuffleArray = (array: any[]) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // Generate teams function
+  const generateTeams = (teamCount: number) => {
+    const shuffledNames = shuffleArray(names);
+    const teamSize = Math.floor(shuffledNames.length / teamCount);
+    const remainder = shuffledNames.length % teamCount;
+    
+    let currentIndex = 0;
+    const newTeams: Team[] = [];
+    
+    // Create teams
+    for (let i = 0; i < teamCount; i++) {
+      // Calculate size for this team (distribute remainder)
+      const thisTeamSize = teamSize + (i < remainder ? 1 : 0);
+      
+      // Add team with members
+      newTeams.push({
+        name: `Team ${i + 1}`,
+        members: shuffledNames.slice(currentIndex, currentIndex + thisTeamSize)
+      });
+      
+      currentIndex += thisTeamSize;
+    }
+    
+    setTeams(newTeams);
   };
 
   return (
@@ -95,7 +111,7 @@ const TeamGenerator = () => {
       <Card className="bg-white rounded-lg shadow-md">
         <CardHeader>
           <CardTitle className="text-xl font-medium text-gray-800">Team Generator</CardTitle>
-          <CardDescription>Randomly assign names to teams</CardDescription>
+          <CardDescription>Create balanced teams from your list of names</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -111,7 +127,7 @@ const TeamGenerator = () => {
                     <FormControl>
                       <Input
                         type="number"
-                        placeholder="Enter number of teams"
+                        placeholder="Enter team count (2-10)"
                         {...field}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                       />
@@ -124,17 +140,17 @@ const TeamGenerator = () => {
               <div className="flex space-x-2">
                 <Button
                   type="submit"
-                  disabled={isGenerating || namesQuery.isLoading || namesQuery.data?.length === 0}
+                  disabled={isLoadingNames}
                   className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-md font-medium flex items-center transition-colors duration-200"
                 >
-                  {isGenerating ? (
+                  {isLoadingNames ? (
                     <>
-                      <span>Generating Teams...</span>
+                      <span>Loading...</span>
                       <Loader2 className="ml-2 h-5 w-5 animate-spin" />
                     </>
                   ) : (
                     <>
-                      <Users className="mr-2 h-5 w-5" />
+                      <UsersRound className="mr-2 h-5 w-5" />
                       Generate Teams
                     </>
                   )}
@@ -144,12 +160,11 @@ const TeamGenerator = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => form.handleSubmit(handleSubmit)()}
-                    disabled={isGenerating}
+                    onClick={() => generateTeams(form.getValues().teamCount)}
                     className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium flex items-center transition-colors duration-200"
                   >
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Shuffle Again
+                    <RefreshCw className="mr-2 h-5 w-5" />
+                    Reshuffle
                   </Button>
                 )}
               </div>
@@ -158,50 +173,28 @@ const TeamGenerator = () => {
         </CardContent>
       </Card>
 
-      {/* Display Teams */}
       {teams.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {teams.map((team, index) => (
-            <Card key={index} className="bg-white rounded-lg shadow-md">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-medium text-gray-800">{team.name}</CardTitle>
+            <Card key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
+              <CardHeader className="bg-gray-50 pb-2">
+                <CardTitle className="text-lg font-medium">{team.name}</CardTitle>
                 <CardDescription>{team.members.length} members</CardDescription>
               </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="font-medium">Name</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {team.members.map((member) => (
-                      <TableRow key={member.id}>
-                        <TableCell>{member.fullName}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <CardContent className="pt-4">
+                <ul className="divide-y divide-gray-200">
+                  {team.members.map((member, mIndex) => (
+                    <li
+                      key={mIndex}
+                      className="px-2 py-2 hover:bg-gray-50 transition-colors duration-150 text-sm"
+                    >
+                      {member.fullName}
+                    </li>
+                  ))}
+                </ul>
               </CardContent>
             </Card>
           ))}
-        </div>
-      )}
-
-      {/* No names message */}
-      {(!namesQuery.data || namesQuery.data.length === 0) && !namesQuery.isLoading && (
-        <Card className="bg-white rounded-lg shadow-md p-6 text-center">
-          <p className="text-gray-500">
-            Add names to the system before generating teams. Go to the "Manage Names" tab to add names.
-          </p>
-        </Card>
-      )}
-
-      {/* Loading state */}
-      {namesQuery.isLoading && (
-        <div className="flex justify-center items-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2 text-gray-600">Loading names...</span>
         </div>
       )}
     </div>
