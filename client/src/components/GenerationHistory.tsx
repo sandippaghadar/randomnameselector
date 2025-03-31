@@ -75,7 +75,7 @@ const GenerationHistory = ({ history, onClearHistory }: GenerationHistoryProps) 
             <AccordionItem key={index} value={`item-${index}`}>
               <AccordionTrigger className="text-sm font-medium text-left">
                 <div className="flex justify-between w-full">
-                  <span>Generation #{history.length - index}</span>
+                  <span>Generation Set #{history.length - index}</span>
                   <span className="text-gray-500 font-normal mr-4">{entry.date}</span>
                 </div>
               </AccordionTrigger>
@@ -96,9 +96,10 @@ const GenerationHistory = ({ history, onClearHistory }: GenerationHistoryProps) 
                     {entry.names.map((name, nameIndex) => (
                       <li
                         key={nameIndex}
-                        className="px-4 py-2 hover:bg-gray-50 transition-colors duration-150 text-sm"
+                        className="px-4 py-2 hover:bg-gray-50 transition-colors duration-150 text-sm flex"
                       >
-                        {name}
+                        <span className="mr-3 font-medium text-primary">{nameIndex + 1}.</span>
+                        <span>{name}</span>
                       </li>
                     ))}
                   </ul>

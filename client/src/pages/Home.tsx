@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import NameGenerator from "@/components/NameGenerator";
 import NameManager from "@/components/NameManager";
-import TeamGenerator from "@/components/TeamGenerator";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<string>("manage");
@@ -13,24 +12,20 @@ export default function Home() {
         {/* Header */}
         <header className="text-center mb-8">
           <h1 className="text-3xl font-medium text-gray-800">Name Management System</h1>
-          <p className="text-gray-600 mt-2">Add, manage, generate, or organize names into teams</p>
+          <p className="text-gray-600 mt-2">Add, manage, and generate random names</p>
         </header>
         
         {/* Main Content */}
         <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
+          <TabsList className="grid w-full grid-cols-2 mb-8">
             <TabsTrigger value="manage">Manage Names</TabsTrigger>
             <TabsTrigger value="generate">Generate Names</TabsTrigger>
-            <TabsTrigger value="teams">Create Teams</TabsTrigger>
           </TabsList>
           <TabsContent value="manage">
             <NameManager />
           </TabsContent>
           <TabsContent value="generate">
             <NameGenerator />
-          </TabsContent>
-          <TabsContent value="teams">
-            <TeamGenerator />
           </TabsContent>
         </Tabs>
         

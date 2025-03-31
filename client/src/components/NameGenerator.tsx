@@ -13,97 +13,7 @@ import { List, Loader2, Copy, RefreshCw } from "lucide-react";
 import ResultsList from "@/components/ResultsList";
 import GenerationHistory from "@/components/GenerationHistory";
 
-// Form schema with validation
-const formSchema = z.object({
-  count: z.coerce
-    .number()
-    .min(1, { message: "Count must be at least 1" })
-    .max(100, { message: "Count cannot exceed 100" }),
-});
 
-type FormValues = z.infer<typeof formSchema>;
-
-const GeneratorForm = ({ onGenerate, onReset, isLoading }: {
-  onGenerate: (count: number) => void;
-  onReset: () => void;
-  isLoading: boolean;
-}) => {
-  // Initialize form with default values
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      count: 5,
-    },
-  });
-
-  const handleSubmit = (values: FormValues) => {
-    onGenerate(values.count);
-  };
-
-  return (
-    <Card className="bg-white rounded-lg shadow-md">
-      <CardHeader>
-        <CardTitle className="text-xl font-medium text-gray-800">Generate Random Names</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="count"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700">
-                    Number of Names
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Enter count (1-100)"
-                      {...field}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                    />
-                  </FormControl>
-                  <FormMessage className="text-error text-sm" />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex space-x-2">
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-md font-medium flex items-center transition-colors duration-200"
-              >
-                {isLoading ? (
-                  <>
-                    <span>Generating...</span>
-                    <Loader2 className="ml-2 h-5 w-5 animate-spin" />
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-5 w-5" />
-                    Generate
-                  </>
-                )}
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onReset}
-                disabled={isLoading}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium flex items-center transition-colors duration-200"
-              >
-                Reset
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
-  );
-};
 
 const NameGenerator = () => {
   const [generatedNames, setGeneratedNames] = useState<string[]>([]);
@@ -145,8 +55,9 @@ const NameGenerator = () => {
     },
   });
 
-  const handleGenerate = (count: number) => {
-    generateMutation.mutate(count);
+  const handleGenerate = () => {
+    // Always generate 5 names
+    generateMutation.mutate(5);
   };
 
   const handleReset = () => {
@@ -186,11 +97,42 @@ const NameGenerator = () => {
 
   return (
     <div className="space-y-6">
-      <GeneratorForm
-        onGenerate={handleGenerate}
-        onReset={handleReset}
-        isLoading={generateMutation.isPending}
-      />
+      <Card className="bg-white rounded-lg shadow-md">
+        <CardHeader>
+          <CardTitle className="text-xl font-medium text-gray-800">Generate 5 Random Names</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex space-x-2">
+            <Button
+              onClick={handleGenerate}
+              disabled={generateMutation.isPending}
+              className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-md font-medium flex items-center transition-colors duration-200"
+            >
+              {generateMutation.isPending ? (
+                <>
+                  <span>Generating...</span>
+                  <Loader2 className="ml-2 h-5 w-5 animate-spin" />
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-5 w-5" />
+                  Generate 5 Names
+                </>
+              )}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleReset}
+              disabled={generateMutation.isPending}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium flex items-center transition-colors duration-200"
+            >
+              Reset
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {generatedNames.length > 0 && (
         <ResultsList names={generatedNames} onCopy={handleCopy} />
