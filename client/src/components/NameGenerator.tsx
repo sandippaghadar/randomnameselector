@@ -22,7 +22,12 @@ type FormValues = z.infer<typeof formSchema>;
 
 
 const NameGenerator = () => {
-  const [generatedNames, setGeneratedNames] = useState<string[]>([]);
+  const [generatedNames, setGeneratedNames] = useState<string[]>(() => {
+    // Load last generated names from localStorage on initial render
+    const savedNames = localStorage.getItem('lastGeneratedNames');
+    return savedNames ? JSON.parse(savedNames) : [];
+  });
+  
   const [generationHistory, setGenerationHistory] = useState<{date: string, names: string[]}[]>(() => {
     // Load history from localStorage on initial render
     const savedHistory = localStorage.getItem('nameGenerationHistory');
@@ -48,6 +53,9 @@ const NameGenerator = () => {
     onSuccess: (names) => {
       setGeneratedNames(names);
       
+      // Save the current generation to localStorage
+      localStorage.setItem('lastGeneratedNames', JSON.stringify(names));
+      
       // Add to history with timestamp
       const newEntry = {
         date: new Date().toLocaleString(),
@@ -57,7 +65,7 @@ const NameGenerator = () => {
       const updatedHistory = [newEntry, ...generationHistory.slice(0, 9)]; // Keep last 10 entries
       setGenerationHistory(updatedHistory);
       
-      // Save to localStorage
+      // Save history to localStorage
       localStorage.setItem('nameGenerationHistory', JSON.stringify(updatedHistory));
     },
     onError: (error) => {
@@ -76,6 +84,8 @@ const NameGenerator = () => {
 
   const handleReset = () => {
     setGeneratedNames([]);
+    // Clear last generated names from localStorage
+    localStorage.removeItem('lastGeneratedNames');
   };
 
   const handleClearHistory = () => {

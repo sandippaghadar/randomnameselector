@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -9,8 +9,22 @@ import NamesTable from "@/components/NamesTable";
 const NameManager = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [localNames, setLocalNames] = useState<Name[]>([]);
   
-  // Fetch all names
+  // Get names from localStorage on initial load
+  useEffect(() => {
+    const savedNames = localStorage.getItem('savedNamesList');
+    if (savedNames) {
+      try {
+        const parsedNames = JSON.parse(savedNames) as Name[];
+        setLocalNames(parsedNames);
+      } catch (e) {
+        console.error("Error parsing names from localStorage", e);
+      }
+    }
+  }, []);
+  
+  // Fetch all names from server
   const namesQuery = useQuery({
     queryKey: ['/api/names'],
     queryFn: async () => {
@@ -20,11 +34,21 @@ const NameManager = () => {
     }
   });
   
+  // Update localStorage and local state when query data changes
+  useEffect(() => {
+    if (namesQuery.data) {
+      localStorage.setItem('savedNamesList', JSON.stringify(namesQuery.data));
+      setLocalNames(namesQuery.data);
+    }
+  }, [namesQuery.data]);
+  
+  // Use local names if available, otherwise use names from query
+  const displayNames = localNames.length > 0 ? localNames : (namesQuery.data || []);
+  
   // Extract just the name strings for duplicate checking
   const existingNameStrings = useMemo(() => {
-    if (!namesQuery.data) return [];
-    return namesQuery.data.map(name => name.fullName);
-  }, [namesQuery.data]);
+    return displayNames.map(name => name.fullName);
+  }, [displayNames]);
   
   // Add name mutation
   const addNameMutation = useMutation({
@@ -92,8 +116,8 @@ const NameManager = () => {
       />
       
       <NamesTable 
-        names={namesQuery.data || []} 
-        isLoading={namesQuery.isLoading} 
+        names={displayNames} 
+        isLoading={namesQuery.isLoading && localNames.length === 0} 
         onRemove={handleRemoveName}
         isRemoving={removeNameMutation.isPending}
       />
